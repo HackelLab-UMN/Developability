@@ -1,36 +1,25 @@
-import model_training_functions as train
-import pandas as pd
-import hyperopt_model
-import test_final_set
+import submodels_module as modelbank
+
 
 def main():
+    '''pick your favorite one to try, initialize with model architecture and % of dataset, and assays if needed
+    Eventually I'll need to write a script to convert array ID into diffferent models.
 
-    #List of possible sequence-to-yield models
-    model_names=['emb_rnn_atn','emb_rnn','emb_cnn_atn','emb_cnn','emb_fnn_flat','emb_fnn_max','seq_fnn_flat','emb_ridge','seqridge','seqforest','seqsvm','seqfnn_small','seqemb_fnn_small','controlridge']
+    current model options are [ridge,random_forest,svm]
+    '''
 
-    #Sample of assay-to-yield models
-    #j=(1,8,9,10) #set which assays should be used to predict yield
-    #assays=[] #must pass in to help format input of model
-    #for i in list(j):
-    #    assays.append('Sort'+str(i)+'_mean_score') #name of column in dataframe
-    #model_name='assay_ridge_'+str(list(j))
+    #assay_to_yield_model(list of assays, model_arch, % data)
+    a=modelbank.assay_to_yield_model([1,2,3],'ridge',0.5)
+    a.cross_validate_model()
 
-    #Sample of seq-to-assay (2)
-    #model_names=['2seqridge']
+    #assay_to_yield_model(list of assays, model_arch, % data)
+    b=modelbank.seq_to_assay_model([4,5,6],'ridge',0.01)
+    b.cross_validate_model()
 
-    import sys
-    combo_no=int(sys.argv[1]) #choose which model to work on based upon MSI job array ID#
+    #assay_to_yield_model(model_arch, % data)
+    c=modelbank.seq_to_yield_model('ridge',0.5)
+    c.cross_validate_model()
 
-    for i in range(25): #optimize hyper-parameters, in a loop so it saves trials between runs incase MSI time runs out
-        hyperopt_model.hyp_train(model_names[combo_no],assays=None)
-    
-
-    cv=test_final_set.cross_validate_best_model(model_names[combo_no],assays=None,resolve=True) #once best hyper-parameter is found, redo once to make figure
-    print(model_names[combo_no])
-    print(cv)
-    test=test_final_set.test_final(model_names[combo_no],assays=None) #using best hyper-parameter, predict testset
-    print(test)
 
 if __name__ == '__main__':
     main()
-        
