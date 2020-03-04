@@ -52,9 +52,10 @@ class model:
             self.tpe_trials = Trials()
 
     def save_hyp(self):
-        'save hyperopt trials'
+        'save hyperopt trials, refresh best trial'
         with open(self.trials_file, "wb") as f:
             pickle.dump(self.tpe_trials, f)
+        self.best_trial = load_format_data(self.tpe_trials)
 
     # def save_model(self):
     #     'save the trained model'
@@ -116,5 +117,6 @@ class model:
         'use hpyeropt to determine hyperparameters for self.tpe_trials'
         if len(self.tpe_trials)<self.num_hyp_trials:
             tpe_best=fmin(fn=self.hyperopt_obj,space=self._model.parameter_space,algo=tpe.suggest,trials=self.tpe_trials,max_evals=len(self.tpe_trials)+3)
+            self.save_hyp()
         else:
             print('Already done with cross-validation')
