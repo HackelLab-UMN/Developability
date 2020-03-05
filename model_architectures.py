@@ -5,12 +5,13 @@ from sklearn.svm import SVR
 
 def get_model(model_architecture):
     'call this to set model._model based upon model_architecture'
-        model_switcher= {
+    model_switcher= {
         'ridge': ridge_model(),
+        'emb_ridge': ridge_model(),
         'forest': forest_model(),
         'svm': svm_model()
         }
-        return model_switcher.get(model_architecture)
+    return model_switcher.get(model_architecture)
 
 class ridge_model():
     def __init__(self):

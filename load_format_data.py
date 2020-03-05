@@ -1,4 +1,5 @@
 import pandas as pd
+pd.options.mode.chained_assignment = None
 import numpy as np
 import random
 
@@ -10,12 +11,6 @@ def sub_sample(df,sample_fraction):
     'randomly sample dataframe'
     sub=random.sample(range(len(df)),int(len(df)*sample_fraction))
     return df.iloc[sub]
-
-def get_best_trial(tpe_trials):
-    'sort trials by loss, return best trial'
-    sorted_trials = sorted(tpe_trials.results, key=lambda x: x['loss'], reverse=False)
-    return sorted_trials[0]
-
 
 def explode_yield(df):
     '''seperate datapoints by IQ/SH yield
@@ -29,52 +24,83 @@ def explode_yield(df):
 
     '''
     OH_matrix=np.eye(2)
+    cat_var=[]
+    exploded_df=[]
+
     IQ_data=df[df['IQ_Average_bc'].notnull()]
     if not IQ_data.empty:
-        IQ_data.loc[:,'Cat_Var']=[[OH_matrix[0]]]*len(IQ_data)
+        for i in range(len(IQ_data)):
+            cat_var.append(OH_matrix[0].tolist())
         IQ_data.loc[:,'y']=IQ_data['IQ_Average_bc']
+        exploded_df.append(IQ_data)
 
     SH_data=df[df['SH_Average_bc'].notnull()]
     if not SH_data.empty:
-        SH_data.loc[:,'Cat_Var']=[[OH_matrix[1]]]*len(SH_data)
+        for i in range(len(SH_data)):
+            cat_var.append(OH_matrix[1].tolist())
         SH_data.loc[:,'y']=SH_data['SH_Average_bc']
+        exploded_df.append(SH_data)
 
-    return IQ_data.append(SH_data,ignore_index=True,sort=False)
+    exploded_df=pd.concat(exploded_df,ignore_index=True)
+    y=exploded_df.loc[:,'y'].values.tolist()
 
-def expode_assays(assays,df):
-    'seperate datapoints by assays to be predicted similar to explode_yield'
-    pass
+    return exploded_df, cat_var, y
 
-def mix_with_cat_var(df):
-    'mix x_a and cat_varable into model input x'
-    xa=df['x_a'].values.tolist()
-    cat_var=df['Cat_Var'].values.tolist()
+def explode_assays(assays,df):
+    'seperate datapoints by assays to be predicted, similar to explode_yield'
+    OH_matrix=np.eye(len(assays))
+    OH_counter=0
+    cat_var=[]
+    exploded_df=[]
 
-    #need to figure out how to merge the different datatypes
-    x_out=[]
-    for i in range(len(xa)):
-        print(xa[i].shape)
-        print(np.array(cat_var[i][0]).shape)
-        x_blah=np.concatenate(xa[i],np.array(cat_var[i][0]))
-        print(x_blah)
+    for i in assays:
+        assay_df=df[df['Sort'+str(i)+'_mean_score'].notnull()]
+        if not assay_df.empty:
+            for j in range(len(assay_df)):
+                cat_var.append(OH_matrix[OH_counter].tolist())
+            assay_df.loc[:,'y']=assay_df['Sort'+str(i)+'_mean_score']
+            exploded_df.append(assay_df)
+        OH_counter=OH_counter+1
 
-    df[:,'x']=x_out
+    exploded_df=pd.concat(exploded_df,ignore_index=True)
+    y=exploded_df.loc[:,'y'].values.tolist()
 
-    return df
+    return exploded_df, cat_var, y
+
+
+def mix_with_cat_var(x_a,cat_var):
+    if len(cat_var[0])>1:
+        x=[]
+        for i in range(len(x_a)):
+            x.append(x_a[i]+cat_var[i])
+        return x
+    else:
+        return x_a #if there is only one catagory of 'y', dont include catagorical variable in model input
 
 def get_ordinal(df):
     'sets ordinal encoded sequence to x_a in df for use in embedding models'
-    pass
+    x_a=df.loc[:,'Ordinal'].values.tolist()
+    for i in range(len(x_a)):
+        x_a[i]=x_a[i].tolist()
+    return x_a
+
 
 def get_onehot(df):
     'sets one_hot encoded sequence to x_a in df'
-    df.loc[:,'x_a']=df.loc[:,'One_Hot']
-    return df
+    x_a=df.loc[:,'One_Hot'].values.tolist()
+    for i in range(len(x_a)):
+        x_a[i]=x_a[i].tolist()
+    return x_a
 
 def get_assays(assays,df):
     'sets assay values (of assays) to x_a in df'
-    pass
+    column_names=[]
+    for i in assays:
+        column_names.append('Sort'+str(i)+'_mean_score')
+    x_a=df.loc[:,column_names].values.tolist()
+    return x_a
 
 def get_control(df):
     'x_a should be null for a zero_rule model that guesses based upon average'
-    pass
+    x_a=[[]]*len(df)
+    return x_a

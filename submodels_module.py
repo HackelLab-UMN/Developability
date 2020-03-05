@@ -66,4 +66,14 @@ class seq_to_assay_model(x_to_assay_model, seq_to_x_model):
         super().__init__('seq',assays, model_architecture, sample_fraction)
         seq_to_x_model.__init__(self,model_architecture)
 
+class control_to_assay_model(x_to_assay_model, control_to_x_model):
+    'predict assay scores based upon average of assay score of training set'
+    def __init__(self, assays, model_architecture, sample_fraction):
+        super().__init__('control',assays, model_architecture, sample_fraction)
+        control_to_x_model.__init__(self)
 
+class control_to_yield_model(x_to_yield_model, control_to_x_model):
+    'predict assay scores based upon average of assay score of training set'
+    def __init__(self, model_architecture, sample_fraction):
+        super().__init__('control', model_architecture, sample_fraction)
+        control_to_x_model.__init__(self)

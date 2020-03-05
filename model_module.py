@@ -3,6 +3,7 @@ import pandas as pd
 import pickle
 from hyperopt import Trials,fmin,tpe,STATUS_OK
 from sklearn.model_selection import RepeatedKFold
+from sklearn.metrics import mean_squared_error as mse
 import load_format_data
 from model_architectures import get_model
 
@@ -25,15 +26,31 @@ class model:
         'load architecture class which sets hyp space'
         self._model=get_model(model_architecture)
 
-    def evaluate_model_cv(self):
-        'train the repeated kfold dataset. Caclulate average across splits of one dataset, then average across repeats of dataset'
+    def evaluate_model_common(self):
+        mse_list=[]
         for i in self.data_pairs:
             train_x,train_y=self.format_modelIO(i[0])
             test_x,test_y=self.format_modelIO(i[1])
+            self._model.model.fit(train_x,train_y)
+            test_prediction=self._model.model.predict(test_x).squeeze()
+            mse_list.append(mse(test_y,test_prediction))
+        return mse_list
+
+    def evaluate_model_cv(self):
+        'train the repeated kfold dataset. Caclulate average across splits of one dataset, then average across repeats of dataset'
+        mse_list=self.evaluate_model_common()
+        cv_mse=[] #average mse values for each repeat of the spliting
+        for i in range(0,len(mse_list),self.num_cv_splits):
+            split_mse=[] #mse values for each split of the data
+            for j in range(i,i+self.num_cv_splits):
+                split_mse.append(mse_list[j])
+            cv_mse.append(np.average(split_mse))
+        return np.average(cv_mse)
 
     def evaluate_model_test(self):
         'train the reapeated training data. Calculate average loss on test set to average out model randomness'
-        pass
+        mse_list=self.evaluate_model_common()
+        return np.average(mse_list)
 
     # def predict_model(self):
     #     'useing trained model, predict test set'
@@ -43,11 +60,22 @@ class model:
     #     'updata dataframe with new column of predicted values from model'
     #     self.parent_warning()
 
+    def print_tpe_trials(self):
+        print(pd.DataFrame(list(self.tpe_trials.results)))
+
+    def get_best_trial(self):
+        'sort trials by loss, return best trial'
+        if len(self.tpe_trials)>0:
+            if len(self.tpe_trials)<self.num_hyp_trials:
+                print('Warning: Not fully tested hyperparameters')
+            sorted_trials = sorted(self.tpe_trials.results, key=lambda x: x['loss'], reverse=False)
+            return sorted_trials[0]
+        print('no trials found')
+
     def load_hyp(self):
         'load hyperopt trials'
         try:  # try to load an already saved trials object
             self.tpe_trials = pickle.load(open(self.trials_file, "rb"))
-            self.best_trial = load_format_data(self.tpe_trials)
         except:
             self.tpe_trials = Trials()
 
@@ -55,7 +83,6 @@ class model:
         'save hyperopt trials, refresh best trial'
         with open(self.trials_file, "wb") as f:
             pickle.dump(self.tpe_trials, f)
-        self.best_trial = load_format_data(self.tpe_trials)
 
     # def save_model(self):
     #     'save the trained model'
@@ -67,14 +94,9 @@ class model:
 
     def format_modelIO(self,df):
         'based upon model architecture and catagorical variables create the numpy input (x) and output (y) for the model'
-        df_local=self.get_output_and_explode(df) #set y, do output firest to explode cat variables
-        df_local=self.get_input_seq(df_local) #set xa (OH seq, Ord seq, assay, control)
-        df_local=load_format_data.mix_with_cat_var(df_local) #mix xa with cat variables
-
-
-        x=df_local['x']
-        y=df_local['y']
-        print(x,y)
+        df_local,cat_var,y=self.get_output_and_explode(df) #set y, do output firest to explode cat variables
+        x_a=self.get_input_seq(df_local) #set xa (OH seq, Ord seq, assay, control)
+        x=load_format_data.mix_with_cat_var(x_a,cat_var) #mix xa with cat variables
         return x,y
 
     def make_cv_dataset(self):
@@ -109,9 +131,9 @@ class model:
         'for a given hyperparameter set, build model arch, evaluate model, return validation loss'
         self.set_model_state(cv=True)
         self._model.set_model(space)
-        self.evaluate_model()
+        loss=self.evaluate_model()
 
-        return {'loss': 0, 'status': STATUS_OK ,'hyperparam':space}
+        return {'loss': loss, 'status': STATUS_OK ,'hyperparam':space}
 
     def cross_validate_model(self):
         'use hpyeropt to determine hyperparameters for self.tpe_trials'
@@ -120,3 +142,10 @@ class model:
             self.save_hyp()
         else:
             print('Already done with cross-validation')
+
+    def test_model(self):
+        'using the best hyperparameters, train using full training dataset and predict test set'
+        self.set_model_state(cv=False)
+        self._model.set_model(self.get_best_trial()['hyperparam'])
+        loss=self.evaluate_model()
+        print('test loss=',str(loss))
