@@ -9,29 +9,33 @@ def main():
     '''
 
     # assay_to_yield_model(list of assays, model_arch, % data)
-    a=modelbank.assay_to_yield_model([1,2,3],'ridge',0.5)
-    a.cross_validate_model()
-    a.test_model()
+    # a=modelbank.assay_to_yield_model([1,8,9,10],'forest',1)
+    # a.cross_validate_model()
+    # a.test_model()
+    # a.plot()
 
     #seq_to_assay_model(list of assays, model_arch, % data)
-    b=modelbank.seq_to_assay_model([1,2,3],'ridge',0.01)
-    b.cross_validate_model()
-    b.test_model()
+    # b=modelbank.seq_to_assay_model([1,2,3],'ridge',0.01)
+    # b.cross_validate_model()
+    # b.test_model()
+    # b.plot()
 
     # seq_to_yield_model(model_arch, % data)
-    c=modelbank.seq_to_yield_model('ridge',0.5)
-    c.cross_validate_model()
-    c.test_model()
+    # c=modelbank.seq_to_yield_model('forest',1)
+    # c.cross_validate_model()
+    # c.test_model()
+    # c.plot()
 
-    # control_to_yield_model(model arch, %)
+    # # control_to_yield_model(model arch, %)
     d=modelbank.control_to_yield_model('ridge',1)
     d.cross_validate_model()
     d.test_model()
+    d.plot()
 
-    # control_to_assay_model(assays,model arch, %)
-    e=modelbank.control_to_assay_model([1,2,3],'ridge',0.01)
-    e.cross_validate_model()
-    e.test_model()
+    # # control_to_assay_model(assays,model arch, %)
+    # e=modelbank.control_to_assay_model([1,2,3],'ridge',0.01)
+    # e.cross_validate_model()
+    # e.test_model()
 
 
 if __name__ == '__main__':

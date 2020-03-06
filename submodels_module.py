@@ -1,6 +1,7 @@
 from model_module import model
 from functools import partial
 import load_format_data
+import plot_model
 
 
 class seq_to_x_model():
@@ -26,9 +27,11 @@ class x_to_yield_model(model):
     def __init__(self, model_in, model_architecture, sample_fraction):
         super().__init__(model_in, 'yield', model_architecture, sample_fraction)
         self.get_output_and_explode=load_format_data.explode_yield
+        self.plot_type=plot_model.x_to_yield_plot
         self.training_df=load_format_data.load_df('assay_to_dot_training_data')
         self.testing_df=load_format_data.load_df('seq_to_dot_test_data') 
         self.num_cv_splits=10
+        self.num_cv_repeats=10
         self.num_hyp_trials=50
 
 class x_to_assay_model(model):
@@ -36,9 +39,11 @@ class x_to_assay_model(model):
     def __init__(self, model_in, assays, model_architecture, sample_fraction):
         super().__init__(model_in, 'assay'+str(assays), model_architecture, sample_fraction)
         self.get_output_and_explode=partial(load_format_data.explode_assays,assays)
+        self.plot_type=plot_model.x_to_assay_plot
         self.training_df=load_format_data.load_df('seq_to_assay_train_all10') #could adjust in future for sequences with predictive assays
         self.testing_df=load_format_data.load_df('assay_to_dot_training_data')
         self.num_cv_splits=3
+        self.num_cv_repeats=3
         self.num_hyp_trials=100
 
 class assay_to_yield_model(x_to_yield_model, assay_to_x_model):

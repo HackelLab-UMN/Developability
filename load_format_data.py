@@ -67,7 +67,6 @@ def explode_assays(assays,df):
 
     return exploded_df, cat_var, y
 
-
 def mix_with_cat_var(x_a,cat_var):
     if len(cat_var[0])>1:
         x=[]
