@@ -12,7 +12,9 @@ def get_model(model_architecture):
         'ridge': ridge_model(),
         'forest': forest_model(),
         'svm': svm_model(),
-        'small_fnn': small_fnn()
+        'fnn': fnn(),
+        'emb_fnn_flat': emb_fnn_flat(),
+        'emb_fnn_maxpool': emb_fnn_maxpool()
         }
     return model_switcher.get(model_architecture)
 
@@ -49,28 +51,31 @@ class svm_model():
     def fit(self,x,y):
         self.model.fit(x,y)
 
-class small_fnn():
+class nn():
     def __init__(self):
         self.parameter_space={
-        'epochs':hp.uniform('epochs', 0, 2),
-        'batch_size':hp.quniform('batch_size',10,200,1),
-        'layers':hp.quniform('layers',1,5,1),
-        'nodes':hp.quniform('nodes',1,100,1),
+        'epochs':hp.uniform('epochs', 0, 3),
+        'batch_size':hp.uniform('batch_size',0.1,1),
+        'dense_layers':hp.quniform('dense_layers',1,5,1),
+        'dense_nodes_per_layer':hp.quniform('dense_nodes_per_layer',1,100,1),
         'dense_drop':hp.uniform('dense_drop',0.1,0.5)
         }
     
-    def set_model(self,space,**kwargs):
+    def set_init_model(self,space,**kwargs):
         tf.keras.backend.clear_session()
-        layers=int(space['layers'])
-        nodes=int(space['nodes'])
-        dense_dropout=space['dense_drop']
-        self.epochs=int(10**space['epochs'])
-        self.batch_size=int(space['batch_size'])
+        self.space=space
         input_shape=kwargs['xa_len']+kwargs['cat_var_len']
+        self.xa_len=kwargs['xa_len']
+
+        self.inputs=tf.keras.Input(shape=(input_shape,))
+
+    def dense_layers(self):
+        layers=int(self.space['dense_layers'])
+        nodes=int(self.space['dense_nodes_per_layer'])
+        dense_dropout=self.space['dense_drop']
         dense,drop=[[]]*layers,[[]]*layers
 
-        inputs=tf.keras.Input(shape=(input_shape,))
-        drop[0]=tf.keras.layers.Dropout(rate=dense_dropout)(inputs)
+        drop[0]=tf.keras.layers.Dropout(rate=dense_dropout)(self.recombined)
         
         ###following used for hidden layers
         dense[0]=tf.keras.layers.Dense(nodes,activation='relu')(drop[0])
@@ -79,14 +84,71 @@ class small_fnn():
             dense[i]=tf.keras.layers.Dense(nodes,activation='relu')(drop[i])
         
         ###final output uses last dropout layer
-        outputs=tf.keras.layers.Dense(1,activation='linear')(drop[-1])  
+        self.outputs=tf.keras.layers.Dense(1,activation='linear')(drop[-1])  
 
-        self.model=tf.keras.Model(inputs=inputs,outputs=outputs)
+
+    def set_end_model(self):
+        self.model=tf.keras.Model(inputs=self.inputs,outputs=self.outputs)
         self.model.compile(optimizer='adam',loss=tf.keras.losses.MeanSquaredError())
 
     def fit(self,x,y):
-        self.model.fit(x,y,epochs=self.epochs,batch_size=self.batch_size,verbose=0)
+        self.epochs=int(10**self.space['epochs'])
+        self.batch_size=int(len(x)*self.space['batch_size'])        
+        self.model.fit(x,y,epochs=self.epochs,batch_size=self.batch_size,verbose=1)
         
+class fnn(nn):
+    def __init__(self):
+        super().__init__()
+        pass
+
+    def set_model(self,space,**kwargs):
+        self.set_init_model(space,**kwargs)
+        self.recombined=self.inputs
+        self.dense_layers()
+        self.set_end_model()
+
+class emb_nn(nn):
+    def __init__(self):
+        super().__init__()
+        self.parameter_space['AA_emb_dim']=hp.quniform('AA_emb_dim',1,20,1)
+
+    def input_to_AA_emb(self):
+        emb_dim=int(self.space['AA_emb_dim'])
+        self.input_seq=tf.keras.layers.Lambda(lambda x: x[:,:self.xa_len])(self.inputs)
+        self.AA_embed=tf.keras.layers.Embedding(21,emb_dim,input_length=16)(self.input_seq) #(batch size, seq len, embed size)
+
+    def recombine_cat_var(self):
+        self.input_cat_var=tf.keras.layers.Lambda(lambda x: x[:,self.xa_len:])(self.inputs)
+        self.recombined=tf.keras.layers.concatenate([self.flat_seq,self.input_cat_var])
+
+class emb_fnn_maxpool(emb_nn):
+    def __init__(self):
+        super().__init__()
+        pass
+
+    def set_model(self,space,**kwargs):
+        self.set_init_model(space,**kwargs)
+        self.input_to_AA_emb()
+        self.flat_seq=tf.keras.layers.GlobalMaxPool1D()(self.AA_embed) #pool across sequence len, end with (batch size, embed size)
+        self.recombine_cat_var()
+        self.dense_layers()
+        self.set_end_model()
+
+class emb_fnn_flat(emb_nn):
+    def __init__(self):
+        super().__init__()
+        pass
+
+    def set_model(self,space,**kwargs):
+        self.set_init_model(space,**kwargs)
+        self.input_to_AA_emb()
+        self.flat_seq=tf.keras.layers.Flatten()(self.AA_embed) #pool across sequence len, end with (batch size, embed size)
+        self.recombine_cat_var()
+        self.dense_layers()
+        self.set_end_model()
+
+
+
 
 
 

@@ -34,6 +34,7 @@ class x_to_yield_model(model):
         self.testing_df=load_format_data.load_df('seq_to_dot_test_data') 
         self.num_cv_splits=10
         self.num_cv_repeats=10
+        self.num_test_repeats=3
         self.num_hyp_trials=50
 
     def save_predictions(self):
@@ -66,7 +67,8 @@ class x_to_assay_model(model):
         self.testing_df=load_format_data.load_df('assay_to_dot_training_data')
         self.num_cv_splits=3
         self.num_cv_repeats=3
-        self.num_hyp_trials=100
+        self.num_test_repeats=3
+        self.num_hyp_trials=3
 
 
 class assay_to_yield_model(x_to_yield_model, assay_to_x_model):
@@ -91,13 +93,15 @@ class seq_to_yield_model(x_to_yield_model, seq_to_x_model):
 class seq_to_pred_yield_model(x_to_yield_model,seq_to_x_model):
     'sequence to yield model using predicted yields from assay scores'
     def __init__(self, pred_yield_model_prop, seq_to_pred_yield_prop):
-        super().__init__('seq_pred',seq_to_pred_yield_prop[0],seq_to_pred_yield_prop[1])
+        super().__init__('seq',seq_to_pred_yield_prop[0],seq_to_pred_yield_prop[1])
         seq_to_x_model.__init__(self,seq_to_pred_yield_prop[0])
         pred_yield_model_name='assays'+str(pred_yield_model_prop[0])+'_yield_'+pred_yield_model_prop[1]+'_'+str(pred_yield_model_prop[2])+'_'+str(pred_yield_model_prop[3])
+        self.update_model_name(self.model_name+':'+pred_yield_model_name)
         self.training_df=load_format_data.load_df('predicted/seq_to_assay_train_all10_'+pred_yield_model_name)
         self.num_cv_splits=3
         self.num_cv_repeats=3
-        self.num_hyp_trials=50
+        self.num_test_repeats=1
+        self.num_hyp_trials=10
 
 
 class seq_to_assay_model(x_to_assay_model, seq_to_x_model):

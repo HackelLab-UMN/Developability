@@ -35,6 +35,17 @@ class model:
     def parent_warning(self):
         print('im in parent class')
 
+    def update_model_name(self,model_name):
+        self.model_name=model_name
+        self.trials_file='./trials/'+self.model_name+'.pkl'
+        self.stats_file='./model_stats/'+self.model_name+'.pkl'
+        self.plotpairs_file='./plotpairs/'+self.model_name+'.pkl'
+        self.figure_file='./figures/'+self.model_name+'.png'
+        self.model_loc='./models/'+self.model_name
+        self.load_hyp()
+        self.load_model_stats()
+        self.load_plotpairs()
+
     def save_plotpairs(self):
         with open (self.plotpairs_file,'wb') as f:
             pickle.dump([self.plotpairs_cv,self.plotpairs_test],f)
@@ -175,11 +186,11 @@ class model:
             validate.append(local_df.iloc[test_index])
         self.data_pairs=zip(train,validate)
 
-    def make_test_dataset(self,num_test_repeats):
+    def make_test_dataset(self):
         'create list of full training set/test set for repeated model performance evaluation'
         local_df=load_format_data.sub_sample(self.training_df,self.sample_fraction)
         train,test=[],[]
-        for i in range(num_test_repeats):
+        for i in range(self.num_test_repeats):
             train.append(local_df)
             test.append(self.testing_df)
         self.data_pairs=zip(train,test)
@@ -191,7 +202,7 @@ class model:
             self.make_cv_dataset() 
         else:
             self.evaluate_model=self.evaluate_model_test
-            self.make_test_dataset(3)
+            self.make_test_dataset()
 
     def hyperopt_obj(self,space):
         'for a given hyperparameter set, build model arch, evaluate model, return validation loss'
