@@ -24,6 +24,10 @@ class control_to_x_model():
     def __init__(self):
         self.get_input_seq=load_format_data.get_control 
 
+class sequence_embedding_to_x_model():
+    'sets get_input_seq to load the sequence embedding from a saved seq-to-assay model'
+    pass
+
 class x_to_yield_model(model):
     'sets model output to yield'
     def __init__(self, model_in, model_architecture, sample_fraction):
@@ -56,7 +60,6 @@ class x_to_yield_model(model):
             df.to_pickle('./datasets/predicted/seq_to_assay_train_all10_'+self.model_name+'_'+str(z)+'.pkl')
 
 
-
 class x_to_assay_model(model):
     'sets to assay_model'
     def __init__(self, model_in, assays, model_architecture, sample_fraction):
@@ -69,6 +72,14 @@ class x_to_assay_model(model):
         self.num_cv_repeats=3
         self.num_test_repeats=3
         self.num_hyp_trials=3
+
+    def save_predictions(self):
+        'save assay score predictions of smaller datasets'
+        pass
+
+    def save_sequence_embeddings(self):
+        'save sequence embeddings of model'
+        pass
 
 
 class assay_to_yield_model(x_to_yield_model, assay_to_x_model):
@@ -83,6 +94,10 @@ class assay_to_yield_model(x_to_yield_model, assay_to_x_model):
         dataset=self.testing_df
         dataset=dataset[~dataset[sort_names].isna().any(axis=1)] 
         self.testing_df=dataset
+
+    def apply_predicted_assay_scores(self):
+        'uses saved predicted assay scores and saved assay-to-yield model to determine performance on test-set' 
+        pass
 
 class seq_to_yield_model(x_to_yield_model, seq_to_x_model):
     'seq to yield'
@@ -121,6 +136,9 @@ class control_to_yield_model(x_to_yield_model, control_to_x_model):
     def __init__(self, model_architecture, sample_fraction):
         super().__init__('control', model_architecture, sample_fraction)
         control_to_x_model.__init__(self)
+
+class sequence_embeding_to_yield_model(x_to_yield_model, sequence_embedding_to_x_model):
+    'predict yield from sequence embedding trained by a seq-to-assay model'
 
 
 

@@ -25,7 +25,7 @@ def main():
     # a2.plot()
 
     ##seq_to_assay_model(list of assays, model_arch, % data)
-    b=modelbank.seq_to_assay_model([1,8,9,10],'emb_fnn_maxpool',0.01)
+    b=modelbank.seq_to_assay_model([1,8,9,10],'emb_fnn_flat',0.01)
     b.cross_validate_model()
     b.test_model()
     b.plot()
