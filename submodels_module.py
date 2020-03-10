@@ -1,5 +1,7 @@
-from model_module import model
+import numpy as np
+import pickle
 from functools import partial
+from model_module import model
 import load_format_data
 import plot_model
 
@@ -34,6 +36,26 @@ class x_to_yield_model(model):
         self.num_cv_repeats=10
         self.num_hyp_trials=50
 
+    def save_predictions(self):
+        'saves model predictions for the large dataset'
+        df=load_format_data.load_df('seq_to_assay_train_all10') #will have to adjust if missing datapoints
+        OH_matrix=np.eye(2)
+        matrix_col=['IQ_Average_bc','SH_Average_bc']
+        x_a=self.get_input_seq(df)
+        for z in range(3): #no of models
+            self.load_model(z)
+            for i in range(2):
+                cat_var=[]
+                for j in x_a:
+                    cat_var.append(OH_matrix[i].tolist())
+                x=load_format_data.mix_with_cat_var(x_a,cat_var)
+                df_prediction=self._model.model.predict(x).squeeze().tolist()
+                col_name=matrix_col[i]
+                df.loc[:,col_name]=df_prediction
+            df.to_pickle('./datasets/predicted/seq_to_assay_train_all10_'+self.model_name+'_'+str(z)+'.pkl')
+
+
+
 class x_to_assay_model(model):
     'sets to assay_model'
     def __init__(self, model_in, assays, model_architecture, sample_fraction):
@@ -45,6 +67,7 @@ class x_to_assay_model(model):
         self.num_cv_splits=3
         self.num_cv_repeats=3
         self.num_hyp_trials=100
+
 
 class assay_to_yield_model(x_to_yield_model, assay_to_x_model):
     'assay to yield, provide which assays, limit test set to useable subset'
@@ -65,6 +88,18 @@ class seq_to_yield_model(x_to_yield_model, seq_to_x_model):
         super().__init__('seq', model_architecture, sample_fraction)
         seq_to_x_model.__init__(self,model_architecture)
 
+class seq_to_pred_yield_model(x_to_yield_model,seq_to_x_model):
+    'sequence to yield model using predicted yields from assay scores'
+    def __init__(self, pred_yield_model_prop, seq_to_pred_yield_prop):
+        super().__init__('seq_pred',seq_to_pred_yield_prop[0],seq_to_pred_yield_prop[1])
+        seq_to_x_model.__init__(self,seq_to_pred_yield_prop[0])
+        pred_yield_model_name='assays'+str(pred_yield_model_prop[0])+'_yield_'+pred_yield_model_prop[1]+'_'+str(pred_yield_model_prop[2])+'_'+str(pred_yield_model_prop[3])
+        self.training_df=load_format_data.load_df('predicted/seq_to_assay_train_all10_'+pred_yield_model_name)
+        self.num_cv_splits=3
+        self.num_cv_repeats=3
+        self.num_hyp_trials=50
+
+
 class seq_to_assay_model(x_to_assay_model, seq_to_x_model):
     'seq to assay, provide assays'
     def __init__(self, assays, model_architecture, sample_fraction):
@@ -82,3 +117,6 @@ class control_to_yield_model(x_to_yield_model, control_to_x_model):
     def __init__(self, model_architecture, sample_fraction):
         super().__init__('control', model_architecture, sample_fraction)
         control_to_x_model.__init__(self)
+
+
+

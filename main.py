@@ -13,6 +13,12 @@ def main():
     # a.cross_validate_model()
     # a.test_model()
     # a.plot()
+    # a.save_predictions()
+
+    a2=modelbank.seq_to_pred_yield_model([[1,8,9,10],'forest',1,0],['forest',0.01])
+    a2.cross_validate_model()
+    a2.test_model()
+    a2.plot()
 
     #seq_to_assay_model(list of assays, model_arch, % data)
     # b=modelbank.seq_to_assay_model([1,2,3],'ridge',0.01)
@@ -27,10 +33,10 @@ def main():
     # c.plot()
 
     # # control_to_yield_model(model arch, %)
-    d=modelbank.control_to_yield_model('ridge',1)
-    d.cross_validate_model()
-    d.test_model()
-    d.plot()
+    # d=modelbank.control_to_yield_model('ridge',1)
+    # d.cross_validate_model()
+    # d.test_model()
+    # d.plot()
 
     # # control_to_assay_model(assays,model arch, %)
     # e=modelbank.control_to_assay_model([1,2,3],'ridge',0.01)
