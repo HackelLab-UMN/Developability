@@ -8,12 +8,13 @@ def main():
     '''
 
     toggle_no=int(sys.argv[1])
+    
     ### seq_to_yield model using measured yields
-    a_models=['ridge','forest','svm']
-    a=modelbank.seq_to_yield_model(a_models[toggle_no],1)
-    a.cross_validate_model()
-    a.test_model()
-    a.plot()
+    # a_models=['ridge','forest','svm']
+    # a=modelbank.seq_to_yield_model(a_models[toggle_no],1)
+    # a.cross_validate_model()
+    # a.test_model()
+    # a.plot()
 
     # ### assay_to_yield_model
     # b=modelbank.assay_to_yield_model([1,8,9,10],'forest',1)
@@ -30,12 +31,14 @@ def main():
     # c.plot()
 
     ### create a sequence to assay model
-    # d=modelbank.seq_to_assay_model([1,8,9,10],'emb_fnn_maxpool',0.01)
-    # d.cross_validate_model()
-    # d.test_model()
-    # d.plot()
-    # d.save_predictions() 
-    # d.save_sequence_embeddings()
+    d_models=['ridge','fnn','emb_fnn_maxpool','emb_fnn_flat']
+    d=modelbank.seq_to_assay_model([1,8,9,10],d_models[toggle_no],1)
+    d.cross_validate_model()
+    d.test_model()
+    d.plot()
+    d.save_predictions() 
+    if toggle_no in [2,3]:
+        d.save_sequence_embeddings() 
 
     ###use assay predictions of test set and assay_to_yield model 
     # seq_to_assay_model_no=0

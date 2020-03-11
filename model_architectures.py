@@ -107,6 +107,10 @@ class fnn(nn):
         self.dense_layers()
         self.set_end_model()
 
+    def get_seq_embeding_layer_model(self):
+        print('this is just the regular OH encoding')
+        return None
+
 class emb_nn(nn):
     def __init__(self):
         super().__init__()
