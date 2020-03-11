@@ -10,7 +10,7 @@ def main():
     toggle_no=int(sys.argv[1])
     ### seq_to_yield model using measured yields
     a_models=['ridge','forest','svm']
-    a=modelbank.seq_to_yield_model('forest',a_models[toggle_no])
+    a=modelbank.seq_to_yield_model(a_models[toggle_no],1)
     a.cross_validate_model()
     a.test_model()
     a.plot()
