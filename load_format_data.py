@@ -103,3 +103,10 @@ def get_control(df):
     'x_a should be null for a zero_rule model that guesses based upon average'
     x_a=[[]]*len(df)
     return x_a
+
+def get_embedding(df):
+    'gets learned embedding for x_a'
+    x_a=df.loc[:,'learned_embedding']
+    for i in range(len(x_a)):
+        x_a[i]=x_a[i].tolist()
+    return x_a

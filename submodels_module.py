@@ -22,11 +22,12 @@ class assay_to_x_model():
 class control_to_x_model():
     'sets get_input_seq to nothing, not sure if needed'
     def __init__(self):
-        self.get_input_seq=load_format_data.get_control 
+        self.get_input_seq=load_format_data.get_embedding 
 
 class sequence_embedding_to_x_model():
     'sets get_input_seq to load the sequence embedding from a saved seq-to-assay model'
-    pass
+    def __init__(self):
+        self.get_input_seq=load_format_data.get_control 
 
 class x_to_yield_model(model):
     'sets model output to yield'
@@ -43,7 +44,7 @@ class x_to_yield_model(model):
 
     def save_predictions(self):
         'saves model predictions for the large dataset'
-        df=load_format_data.load_df('seq_to_assay_train_all10') #will have to adjust if missing datapoints
+        df=load_format_data.load_df('seq_to_assay_train_1,8,9,10') #will have to adjust if missing datapoints
         OH_matrix=np.eye(2)
         matrix_col=['IQ_Average_bc','SH_Average_bc']
         x_a=self.get_input_seq(df)
@@ -57,7 +58,7 @@ class x_to_yield_model(model):
                 df_prediction=self._model.model.predict(x).squeeze().tolist()
                 col_name=matrix_col[i]
                 df.loc[:,col_name]=df_prediction
-            df.to_pickle('./datasets/predicted/seq_to_assay_train_all10_'+self.model_name+'_'+str(z)+'.pkl')
+            df.to_pickle('./datasets/predicted/seq_to_assay_train_1,8,9,10_'+self.model_name+'_'+str(z)+'.pkl')
 
 
 class x_to_assay_model(model):
@@ -68,12 +69,12 @@ class x_to_assay_model(model):
         self.assays=assays
         self.get_output_and_explode=partial(load_format_data.explode_assays,assays)
         self.plot_type=plot_model.x_to_assay_plot
-        self.training_df=load_format_data.load_df('seq_to_assay_train_all10') #could adjust in future for sequences with predictive assays
+        self.training_df=load_format_data.load_df('seq_to_assay_train_1,8,9,10') #could adjust in future for sequences with predictive assays
         self.testing_df=load_format_data.load_df('assay_to_dot_training_data')
         self.num_cv_splits=3
         self.num_cv_repeats=3
         self.num_test_repeats=3
-        self.num_hyp_trials=3
+        self.num_hyp_trials=50
 
 
     def save_predictions(self):
@@ -123,8 +124,8 @@ class x_to_assay_model(model):
 class assay_to_yield_model(x_to_yield_model, assay_to_x_model):
     'assay to yield, provide which assays, limit test set to useable subset'
     def __init__(self, assays, model_architecture, sample_fraction):
-        assay_str=','.join([str(x) for x in assays])
-        super().__init__('assays'+assay_str, model_architecture, sample_fraction)
+        self.assay_str=','.join([str(x) for x in assays])
+        super().__init__('assays'+self.assay_str, model_architecture, sample_fraction)
         assay_to_x_model.__init__(self,assays)
         #Limit test set for data that has all assay scores used in model
         sort_names=[]
@@ -134,9 +135,15 @@ class assay_to_yield_model(x_to_yield_model, assay_to_x_model):
         dataset=dataset[~dataset[sort_names].isna().any(axis=1)] 
         self.testing_df=dataset
 
-    def apply_predicted_assay_scores(self):
+    def apply_predicted_assay_scores(self,seq_to_assay_model_prop):
         'uses saved predicted assay scores and saved assay-to-yield model to determine performance on test-set' 
-        pass
+        seq_to_assay_model_name='seq_assay'+self.assay_str+'_'+str(seq_to_assay_model_prop[0])+'_'+str(seq_to_assay_model_prop[1])+'_'+str(seq_to_assay_model_prop[2])
+        self.num_test_repeats=1
+        self.testing_df=load_format_data.load_df('predicted/seq_to_dot_test_data_'+seq_to_assay_model_name)
+        self.figure_file='./figures/'+self.model_name+'_'+seq_to_assay_model_name+'.png'
+        self.stats_file='./model_stats/'+self.model_name+'_'+seq_to_assay_model_name+'.pkl'
+        self.test_model()
+        self.plot()
 
 class seq_to_yield_model(x_to_yield_model, seq_to_x_model):
     'seq to yield'
@@ -149,13 +156,14 @@ class seq_to_pred_yield_model(x_to_yield_model,seq_to_x_model):
     def __init__(self, pred_yield_model_prop, seq_to_pred_yield_prop):
         super().__init__('seq',seq_to_pred_yield_prop[0],seq_to_pred_yield_prop[1])
         seq_to_x_model.__init__(self,seq_to_pred_yield_prop[0])
-        pred_yield_model_name='assays'+str(pred_yield_model_prop[0])+'_yield_'+pred_yield_model_prop[1]+'_'+str(pred_yield_model_prop[2])+'_'+str(pred_yield_model_prop[3])
+        self.assay_str=','.join([str(x) for x in pred_yield_model_prop[0]])
+        pred_yield_model_name='assays'+self.assay_str+'_yield_'+pred_yield_model_prop[1]+'_'+str(pred_yield_model_prop[2])+'_'+str(pred_yield_model_prop[3])
         self.update_model_name(self.model_name+':'+pred_yield_model_name)
-        self.training_df=load_format_data.load_df('predicted/seq_to_assay_train_all10_'+pred_yield_model_name)
+        self.training_df=load_format_data.load_df('predicted/seq_to_assay_train_1,8,9,10_'+pred_yield_model_name)
         self.num_cv_splits=3
         self.num_cv_repeats=3
         self.num_test_repeats=1
-        self.num_hyp_trials=10
+        self.num_hyp_trials=50
 
 
 class seq_to_assay_model(x_to_assay_model, seq_to_x_model):
@@ -178,6 +186,11 @@ class control_to_yield_model(x_to_yield_model, control_to_x_model):
 
 class sequence_embeding_to_yield_model(x_to_yield_model, sequence_embedding_to_x_model):
     'predict yield from sequence embedding trained by a seq-to-assay model'
-    pass
-
-
+    def __init__(self, seq_to_assay_model_prop, model_architecture, sample_fraction):
+        super().__init__('embedding', model_architecture, sample_fraction)
+        sequence_embedding_to_x_model.__init__(self)
+        self.num_test_repeats=1
+        self.assay_str=','.join([str(x) for x in seq_to_assay_model_prop[0]])
+        seq_to_assay_model_name='seq_assay'+self.assay_str+'_'+str(seq_to_assay_model_prop[1])+'_'+str(seq_to_assay_model_prop[2])+'_'+str(seq_to_assay_model_prop[3])
+        self.training_df=load_format_data.load_df('/predicted/learned_embedding_assay_to_dot_training_data_'+seq_to_assay_model_name)
+        self.testing_df=load_format_data.load_df('/predicted/learned_embedding_seq_to_dot_test_data_'+seq_to_assay_model_name)
