@@ -1,5 +1,6 @@
 # uncompressed but picked dataframe for sequence to assay scores
-datasets/seq_to_assay_train_all10.pkl
+datasets/seq_to_assay_train_*.pkl
+datasets/predicted/seq_to_assay_train_*.pkl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
