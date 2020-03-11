@@ -26,9 +26,11 @@ def main():
 
     ##seq_to_assay_model(list of assays, model_arch, % data)
     b=modelbank.seq_to_assay_model([1,8,9,10],'emb_fnn_flat',0.01)
-    b.cross_validate_model()
-    b.test_model()
-    b.plot()
+    # b.cross_validate_model()
+    # b.test_model()
+    # b.plot()
+    # b.save_predictions()
+    b.save_sequence_embeddings()
 
     ### seq_to_yield_model(model_arch, % data)
     # c=modelbank.seq_to_yield_model('ridge',1)

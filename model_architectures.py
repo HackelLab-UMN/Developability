@@ -94,7 +94,7 @@ class nn():
     def fit(self,x,y):
         self.epochs=int(10**self.space['epochs'])
         self.batch_size=int(len(x)*self.space['batch_size'])        
-        self.model.fit(x,y,epochs=self.epochs,batch_size=self.batch_size,verbose=1)
+        self.model.fit(x,y,epochs=self.epochs,batch_size=self.batch_size,verbose=0)
         
 class fnn(nn):
     def __init__(self):
@@ -121,6 +121,10 @@ class emb_nn(nn):
         self.input_cat_var=tf.keras.layers.Lambda(lambda x: x[:,self.xa_len:])(self.inputs)
         self.recombined=tf.keras.layers.concatenate([self.flat_seq,self.input_cat_var])
 
+    def get_seq_embeding_layer_model(self):
+        return tf.keras.Model(inputs=self.model.input,outputs=self.model.get_layer('seq_embedding').output)
+
+
 class emb_fnn_maxpool(emb_nn):
     def __init__(self):
         super().__init__()
@@ -129,7 +133,7 @@ class emb_fnn_maxpool(emb_nn):
     def set_model(self,space,**kwargs):
         self.set_init_model(space,**kwargs)
         self.input_to_AA_emb()
-        self.flat_seq=tf.keras.layers.GlobalMaxPool1D()(self.AA_embed) #pool across sequence len, end with (batch size, embed size)
+        self.flat_seq=tf.keras.layers.GlobalMaxPool1D(name='seq_embedding')(self.AA_embed) #pool across sequence len, end with (batch size, embed size)
         self.recombine_cat_var()
         self.dense_layers()
         self.set_end_model()
@@ -142,7 +146,7 @@ class emb_fnn_flat(emb_nn):
     def set_model(self,space,**kwargs):
         self.set_init_model(space,**kwargs)
         self.input_to_AA_emb()
-        self.flat_seq=tf.keras.layers.Flatten()(self.AA_embed) #pool across sequence len, end with (batch size, embed size)
+        self.flat_seq=tf.keras.layers.Flatten(name='seq_embedding')(self.AA_embed) #pool across sequence len, end with (batch size, embed size)
         self.recombine_cat_var()
         self.dense_layers()
         self.set_end_model()

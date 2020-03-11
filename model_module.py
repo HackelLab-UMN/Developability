@@ -155,19 +155,16 @@ class model:
     def save_model(self,model_no):
         'save the trained model'
         if 'nn' in self.model_architecture:
-            self._model.model.save(self.model_loc+'_'+str(model_no)+'.tf')
+            self._model.model.save_weights(self.model_loc+'_'+str(model_no)+'/')
         else:
             with open(self.model_loc+'_'+str(model_no)+'.pkl', "wb") as f:
                 pickle.dump(self._model.model, f)
 
     def load_model(self,model_no):
-        try:
-            if 'nn' in self.model_architecture:
-                self._model.model=tf.keras.models.load_model(self.model_loc+'_'+str(model_no)+'.tf')
-            else:
-                self._model.model=pickle.load(open(self.model_loc+'_'+str(model_no)+'.pkl', "rb"))
-        except:
-            print('Error loading model')    
+        if 'nn' in self.model_architecture:
+            self._model.model.load_weights(self.model_loc+'_'+str(model_no)+'/').expect_partial()
+        else:
+            self._model.model=pickle.load(open(self.model_loc+'_'+str(model_no)+'.pkl', "rb"))
 
     def format_modelIO(self,df):
         'based upon model architecture and catagorical variables create the numpy input (x) and output (y) for the model'

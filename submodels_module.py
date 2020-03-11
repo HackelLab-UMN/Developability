@@ -63,7 +63,9 @@ class x_to_yield_model(model):
 class x_to_assay_model(model):
     'sets to assay_model'
     def __init__(self, model_in, assays, model_architecture, sample_fraction):
-        super().__init__(model_in, 'assay'+str(assays), model_architecture, sample_fraction)
+        assay_str=','.join([str(x) for x in assays])
+        super().__init__(model_in, 'assay'+assay_str, model_architecture, sample_fraction)
+        self.assays=assays
         self.get_output_and_explode=partial(load_format_data.explode_assays,assays)
         self.plot_type=plot_model.x_to_assay_plot
         self.training_df=load_format_data.load_df('seq_to_assay_train_all10') #could adjust in future for sequences with predictive assays
@@ -73,19 +75,56 @@ class x_to_assay_model(model):
         self.num_test_repeats=3
         self.num_hyp_trials=3
 
+
     def save_predictions(self):
-        'save assay score predictions of smaller datasets'
-        pass
+        'save assay score predictions of test dataset to be used with assay-to-yield model'
+        df=load_format_data.load_df('seq_to_dot_test_data') #will have to adjust if missing datapoints
+        OH_matrix=np.eye(len(self.assays))
+        x_a=self.get_input_seq(df)
+        for z in range(3): #for each model
+            for i in range(len(self.assays)): #for each assay
+                cat_var=[]
+                for j in x_a: #for each sequence add cat_var
+                    cat_var.append(OH_matrix[i].tolist())
+                x=load_format_data.mix_with_cat_var(x_a,cat_var)
+                self._model.set_model(self.get_best_trial()['hyperparam'],xa_len=len(x[0])-len(cat_var[0]), cat_var_len=len(cat_var[0])) #need to build nn arch
+                self.load_model(z) #load pkled sklearn model or weights of nn model
+                df_prediction=self._model.model.predict(x).squeeze().tolist()
+                df.loc[:,'Sort'+str(self.assays[i])+'_mean_score']=df_prediction
+            df.to_pickle('./datasets/predicted/seq_to_dot_test_data_'+self.model_name+'_'+str(z)+'.pkl')
+        
 
     def save_sequence_embeddings(self):
         'save sequence embeddings of model'
-        pass
+        df_list=['assay_to_dot_training_data','seq_to_dot_test_data']
+        OH_matrix=np.eye(len(self.assays))
+
+        for df_name in df_list:
+            df=load_format_data.load_df(df_name)
+            x_a=self.get_input_seq(df)
+            for z in range(3): #for each model
+                for i in range(1): #only need to get cat var for one assay to get sequence embedding 
+                    cat_var=[]
+                    for j in x_a: #for each sequence add cat_var
+                        cat_var.append(OH_matrix[i].tolist())
+                    x=load_format_data.mix_with_cat_var(x_a,cat_var)
+                    self._model.set_model(self.get_best_trial()['hyperparam'],xa_len=len(x[0])-len(cat_var[0]), cat_var_len=len(cat_var[0])) #need to build nn arch
+                    self.load_model(z) #load pkled sklearn model or weights of nn model
+                    seq_embedding_model=self._model.get_seq_embeding_layer_model()
+                    df_prediction=seq_embedding_model.predict([x])
+                    seq_emb_list=[]
+                    for i in df_prediction:
+                        seq_emb_list.append([i])
+                    df.loc[:,'learned_embedding']=seq_emb_list
+                df.to_pickle('./datasets/predicted/learned_embedding_'+df_name+'_'+self.model_name+'_'+str(z)+'.pkl')
+
 
 
 class assay_to_yield_model(x_to_yield_model, assay_to_x_model):
     'assay to yield, provide which assays, limit test set to useable subset'
     def __init__(self, assays, model_architecture, sample_fraction):
-        super().__init__('assays'+str(assays), model_architecture, sample_fraction)
+        assay_str=','.join([str(x) for x in assays])
+        super().__init__('assays'+assay_str, model_architecture, sample_fraction)
         assay_to_x_model.__init__(self,assays)
         #Limit test set for data that has all assay scores used in model
         sort_names=[]
@@ -139,6 +178,6 @@ class control_to_yield_model(x_to_yield_model, control_to_x_model):
 
 class sequence_embeding_to_yield_model(x_to_yield_model, sequence_embedding_to_x_model):
     'predict yield from sequence embedding trained by a seq-to-assay model'
-
+    pass
 
 
