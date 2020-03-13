@@ -14,7 +14,9 @@ def get_model(model_architecture):
         'svm': svm_model(),
         'fnn': fnn(),
         'emb_fnn_flat': emb_fnn_flat(),
-        'emb_fnn_maxpool': emb_fnn_maxpool()
+        'emb_fnn_maxpool': emb_fnn_maxpool(),
+        'emb_rnn': emb_rnn(),
+        'emb_cnn': emb_cnn()
         }
     return model_switcher.get(model_architecture)
 
@@ -155,8 +157,45 @@ class emb_fnn_flat(emb_nn):
         self.dense_layers()
         self.set_end_model()
 
+class emb_rnn(emb_nn):
+    def __init__(self):
+        super().__init__()
+        self.parameter_space['units']=hp.quniform('units',1,100,1)
+        self.parameter_space['input_dropout']=hp.uniform('input_dropout',0.1,0.5)
+        self.parameter_space['recurrent_dropout']=hp.uniform('recurrent_dropout',0.1,0.5)
 
+    def set_model(self,space,**kwargs):
+        units=int(space['units'])
+        input_dropout=space['input_dropout']
+        recurrent_dropout=space['recurrent_dropout']
 
+        self.set_init_model(space,**kwargs)
+        self.input_to_AA_emb()
+        self.flat_seq=tf.keras.layers.Bidirectional(tf.keras.layers.GRU(name='seq_embedding',units=units,recurrent_dropout=recurrent_dropout,dropout=input_dropout))(self.AA_embed)
+        self.recombine_cat_var()
+        self.dense_layers()
+        self.set_end_model()
+
+class emb_cnn(emb_nn):
+    def __init__(self):
+        super().__init__()
+        self.parameter_space['filters']=hp.quniform('filters',1,100,1)
+        self.parameter_space['kernel_size']=hp.quniform('kernel_size',1,16,1) #needs to be updated for different length sequences
+        self.parameter_space['input_drop']=hp.uniform('input_drop',0.1,0.5)
+
+    def set_model(self,space,**kwargs):
+        filters=int(space['filters'])
+        kernel_size=int(space['kernel_size'])
+        input_drop=space['input_drop']
+
+        self.set_init_model(space,**kwargs)
+        self.input_to_AA_emb()
+        self.input_drop=tf.keras.layers.Dropout(rate=input_drop)(self.AA_embed)
+        self.cov=tf.keras.layers.Conv1D(filters=filters,kernel_size=kernel_size,activation='relu')(self.input_drop)
+        self.flat_seq=tf.keras.layers.GlobalMaxPool1D(name='seq_embedding')(self.cov)
+        self.recombine_cat_var()
+        self.dense_layers()
+        self.set_end_model()
 
 
 

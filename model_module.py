@@ -211,14 +211,15 @@ class model:
     def cross_validate_model(self):
         'use hpyeropt to determine hyperparameters for self.tpe_trials'
         if len(self.tpe_trials)<self.num_hyp_trials:
-            tpe_best=fmin(fn=self.hyperopt_obj,space=self._model.parameter_space,algo=tpe.suggest,trials=self.tpe_trials,max_evals=self.num_hyp_trials)
+            # tpe_best=fmin(fn=self.hyperopt_obj,space=self._model.parameter_space,algo=tpe.suggest,trials=self.tpe_trials,max_evals=self.num_hyp_trials)
+            tpe_best=fmin(fn=self.hyperopt_obj,space=self._model.parameter_space,algo=tpe.suggest,trials=self.tpe_trials,max_evals=len(self.tpe_trials)+5)
             self.save_hyp()
             self.save_model_stats()
             self.save_plotpairs()
         else:
             print('Already done with cross-validation')
-            self.set_model_state(cv=True)
-            self.evaluate_model(self.get_best_trial()['hyperparam'],force_saveplots=True)
+            # self.set_model_state(cv=True)
+            # self.evaluate_model(self.get_best_trial()['hyperparam'],force_saveplots=True)
 
     def test_model(self):
         'using the best hyperparameters, train using full training dataset and predict test set'

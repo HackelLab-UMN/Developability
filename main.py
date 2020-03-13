@@ -4,7 +4,7 @@ import submodels_module as modelbank
 
 def main():
     '''
-    current model options are [ridge,forest,svm,fnn,emb_fnn_flat,emb_fnn_maxpool]
+    current model options are [ridge,forest,svm,fnn,emb_fnn_flat,emb_fnn_maxpool,emb_rnn,emb_cnn]
     '''
 
     toggle_no=int(sys.argv[1])
@@ -31,13 +31,14 @@ def main():
     # c.plot()
 
     ### create a sequence to assay model
-    d_models=['ridge','fnn','emb_fnn_maxpool','emb_fnn_flat']
-    d=modelbank.seq_to_assay_model([1,8,9,10],d_models[toggle_no],1)
-    d.cross_validate_model()
-    d.test_model()
+    d_models=['ridge','fnn','emb_fnn_maxpool','emb_fnn_flat','emb_rnn','emb_cnn']
+    d=modelbank.seq_to_assay_model([1,8,9,10],d_models[toggle_no],0.01)
+    for i in range(10):
+       d.cross_validate_model()
+    d.test_model()  
     d.plot()
     d.save_predictions() 
-    if toggle_no in [2,3]:
+    if toggle_no in [2,3,4,5]:
         d.save_sequence_embeddings() 
 
     ###use assay predictions of test set and assay_to_yield model 
