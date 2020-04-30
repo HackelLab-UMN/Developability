@@ -2,6 +2,7 @@ import pandas as pd
 pd.options.mode.chained_assignment = None
 import numpy as np
 import random
+from sklearn.model_selection import ShuffleSplit
 
 def load_df(file_name):
     'set name where datasets are found'
@@ -11,6 +12,12 @@ def sub_sample(df,sample_fraction):
     'randomly sample dataframe'
     sub=random.sample(range(len(df)),int(len(df)*sample_fraction))
     return df.iloc[sub]
+
+def get_random_split(df):
+    rs=ShuffleSplit(n_splits=1,train_size=300,random_state=42)
+    for i,j in rs.split(list(range(len(df)))):
+        train_i,test_i=i,j
+    return df.iloc[train_i],df.iloc[test_i]
 
 def explode_yield(df):
     '''seperate datapoints by IQ/SH yield
@@ -32,6 +39,7 @@ def explode_yield(df):
         for i in range(len(IQ_data)):
             cat_var.append(OH_matrix[0].tolist())
         IQ_data.loc[:,'y']=IQ_data['IQ_Average_bc']
+        IQ_data.loc[:,'y_std']=IQ_data['IQ_Average_bc_std']
         exploded_df.append(IQ_data)
 
     SH_data=df[df['SH_Average_bc'].notnull()]
@@ -39,6 +47,7 @@ def explode_yield(df):
         for i in range(len(SH_data)):
             cat_var.append(OH_matrix[1].tolist())
         SH_data.loc[:,'y']=SH_data['SH_Average_bc']
+        SH_data.loc[:,'y_std']=SH_data['SH_Average_bc_std']
         exploded_df.append(SH_data)
 
     exploded_df=pd.concat(exploded_df,ignore_index=True)
@@ -108,5 +117,5 @@ def get_embedding(df):
     'gets learned embedding for x_a'
     x_a=df.loc[:,'learned_embedding']
     for i in range(len(x_a)):
-        x_a[i]=x_a[i].tolist()
+        x_a[i]=x_a[i][0].tolist()
     return x_a

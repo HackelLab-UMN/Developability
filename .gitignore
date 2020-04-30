@@ -3,6 +3,10 @@ datasets/seq_to_assay_train_*.pkl
 datasets/predicted/seq_to_assay_train_*.pkl
 datasets/originals/seq_to_assay_train_*.pkl
 
+# pbs output files
+*.pbs.e*
+*.pbs.o*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -135,7 +135,7 @@ class model:
         'sort trials by loss, return best trial'
         if len(self.tpe_trials)>0:
             if len(self.tpe_trials)<self.num_hyp_trials:
-                print('Warning: Not fully tested hyperparameters: ' + str(len(self.tpe_trials)) + '<' + str(self.num_hyp_trials))
+                print('Warning: Not fully tested hyperparameters: ' + str(len(self.tpe_trials)) + '<' + str(self.num_hyp_trials)+':'+self.model_name)
             sorted_trials = sorted(self.tpe_trials.results, key=lambda x: x['loss'], reverse=False)
             return sorted_trials[0]
         print('no trials found')
@@ -211,11 +211,18 @@ class model:
     def cross_validate_model(self):
         'use hpyeropt to determine hyperparameters for self.tpe_trials'
         if len(self.tpe_trials)<self.num_hyp_trials:
-            # tpe_best=fmin(fn=self.hyperopt_obj,space=self._model.parameter_space,algo=tpe.suggest,trials=self.tpe_trials,max_evals=self.num_hyp_trials)
-            tpe_best=fmin(fn=self.hyperopt_obj,space=self._model.parameter_space,algo=tpe.suggest,trials=self.tpe_trials,max_evals=len(self.tpe_trials)+5)
-            self.save_hyp()
-            self.save_model_stats()
-            self.save_plotpairs()
+            if 'nn' in self.model_architecture:
+                for i in range(10):
+                    max_evals=min(len(self.tpe_trials)+5,self.num_hyp_trials)
+                    tpe_best=fmin(fn=self.hyperopt_obj,space=self._model.parameter_space,algo=tpe.suggest,trials=self.tpe_trials,max_evals=max_evals)
+                    self.save_hyp()
+                    self.save_model_stats()
+                    self.save_plotpairs()
+            else:
+                tpe_best=fmin(fn=self.hyperopt_obj,space=self._model.parameter_space,algo=tpe.suggest,trials=self.tpe_trials,max_evals=self.num_hyp_trials)
+                self.save_hyp()
+                self.save_model_stats()
+                self.save_plotpairs()
         else:
             print('Already done with cross-validation')
             # self.set_model_state(cv=True)

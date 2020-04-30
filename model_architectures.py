@@ -16,7 +16,11 @@ def get_model(model_architecture):
         'emb_fnn_flat': emb_fnn_flat(),
         'emb_fnn_maxpool': emb_fnn_maxpool(),
         'emb_rnn': emb_rnn(),
-        'emb_cnn': emb_cnn()
+        'emb_cnn': emb_cnn(),
+        'small_emb_rnn': small_emb_rnn(),
+        'small_emb_cnn': small_emb_cnn(),
+        'small_emb_atn_rnn': small_emb_atn_rnn(),
+        'small_emb_atn_cnn': small_emb_atn_cnn()
         }
     return model_switcher.get(model_architecture)
 
@@ -171,7 +175,32 @@ class emb_rnn(emb_nn):
 
         self.set_init_model(space,**kwargs)
         self.input_to_AA_emb()
-        self.flat_seq=tf.keras.layers.Bidirectional(tf.keras.layers.GRU(name='seq_embedding',units=units,recurrent_dropout=recurrent_dropout,dropout=input_dropout))(self.AA_embed)
+        self.flat_seq=tf.keras.layers.Bidirectional(tf.keras.layers.GRU(units=units,recurrent_dropout=recurrent_dropout,dropout=input_dropout),name='seq_embedding')(self.AA_embed)
+        self.recombine_cat_var()
+        self.dense_layers()
+        self.set_end_model()
+
+class small_emb_rnn(emb_rnn):
+    def __init__(self):
+        super().__init__()
+        self.parameter_space['units']=hp.quniform('units',1,5,1)
+
+class small_emb_atn_rnn(small_emb_rnn):
+    def __init__(self):
+        super().__init__()
+
+    def set_model(self,space,**kwargs):
+        units=int(space['units'])
+        input_dropout=space['input_dropout']
+        recurrent_dropout=space['recurrent_dropout']
+
+        self.set_init_model(space,**kwargs)
+        self.input_to_AA_emb()
+        self.rnn_seq=tf.keras.layers.Bidirectional(tf.keras.layers.GRU(units=units,recurrent_dropout=recurrent_dropout,dropout=input_dropout,return_sequences=True))(self.AA_embed)
+        self.rnn_final= tf.keras.layers.Lambda(lambda t: t[:,-1])(self.rnn_seq)
+        self.atn_layer=tf.keras.layers.Attention()([self.rnn_seq,self.rnn_seq])
+        self.flat_atn=tf.keras.layers.GlobalAveragePooling1D()(self.atn_layer)
+        self.flat_seq=tf.keras.layers.Concatenate(name='seq_embedding')([self.rnn_final,self.flat_atn])
         self.recombine_cat_var()
         self.dense_layers()
         self.set_end_model()
@@ -197,5 +226,28 @@ class emb_cnn(emb_nn):
         self.dense_layers()
         self.set_end_model()
 
+class small_emb_cnn(emb_cnn):
+    def __init__(self):
+        super().__init__()
+        self.parameter_space['filters']=hp.quniform('filters',1,10,1)
 
+class small_emb_atn_cnn(small_emb_cnn):
+    def __init__(self):
+        super().__init__()
 
+    def set_model(self,space,**kwargs):
+        filters=int(space['filters'])
+        kernel_size=int(space['kernel_size'])
+        input_drop=space['input_drop']
+
+        self.set_init_model(space,**kwargs)
+        self.input_to_AA_emb()
+        self.input_drop=tf.keras.layers.Dropout(rate=input_drop)(self.AA_embed)
+        self.cov=tf.keras.layers.Conv1D(filters=filters,kernel_size=kernel_size,activation='relu')(self.input_drop)
+        self.cov_flat=tf.keras.layers.GlobalMaxPool1D()(self.cov)
+        self.atn_layer=tf.keras.layers.Attention()([self.cov,self.cov])
+        self.atn_flat=tf.keras.layers.GlobalMaxPool1D()(self.atn_layer)
+        self.flat_seq=tf.keras.layers.Concatenate(name='seq_embedding')([self.cov_flat,self.atn_flat])
+        self.recombine_cat_var()
+        self.dense_layers()
+        self.set_end_model()

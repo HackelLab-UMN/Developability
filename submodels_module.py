@@ -6,6 +6,7 @@ import load_format_data
 import plot_model
 
 
+
 class seq_to_x_model():
     'sets get_input_seq to ordinal or onehot sequence based upon model_architecture'
     def __init__(self, model_architecture):
@@ -22,12 +23,12 @@ class assay_to_x_model():
 class control_to_x_model():
     'sets get_input_seq to nothing, not sure if needed'
     def __init__(self):
-        self.get_input_seq=load_format_data.get_embedding 
+        self.get_input_seq=load_format_data.get_control 
 
 class sequence_embedding_to_x_model():
     'sets get_input_seq to load the sequence embedding from a saved seq-to-assay model'
     def __init__(self):
-        self.get_input_seq=load_format_data.get_control 
+        self.get_input_seq=load_format_data.get_embedding 
 
 class x_to_yield_model(model):
     'sets model output to yield'
@@ -59,6 +60,11 @@ class x_to_yield_model(model):
                 col_name=matrix_col[i]
                 df.loc[:,col_name]=df_prediction
             df.to_pickle('./datasets/predicted/seq_to_assay_train_1,8,9,10_'+self.model_name+'_'+str(z)+'.pkl')
+
+    def switch_train_test(self):
+        regular_training_df=self.training_df
+        extra_training_df,self.testing_df=load_format_data.get_random_split(self.testing_df)
+        self.training_df=regular_training_df.append(extra_training_df)
 
 
 class x_to_assay_model(model):
@@ -151,6 +157,13 @@ class seq_to_yield_model(x_to_yield_model, seq_to_x_model):
         super().__init__('seq', model_architecture, sample_fraction)
         seq_to_x_model.__init__(self,model_architecture)
 
+class final_seq_to_yield_model(seq_to_yield_model):
+    'redoes training and testing divison for final comparison'
+    def __init__(self,model_architecture,sample_fraction):
+        super().__init__(model_architecture,sample_fraction)
+        self.update_model_name('final'+self.model_name)
+        self.switch_train_test()
+
 class seq_to_pred_yield_model(x_to_yield_model,seq_to_x_model):
     'sequence to yield model using predicted yields from assay scores'
     def __init__(self, pred_yield_model_prop, seq_to_pred_yield_prop):
@@ -187,10 +200,17 @@ class control_to_yield_model(x_to_yield_model, control_to_x_model):
 class sequence_embeding_to_yield_model(x_to_yield_model, sequence_embedding_to_x_model):
     'predict yield from sequence embedding trained by a seq-to-assay model'
     def __init__(self, seq_to_assay_model_prop, model_architecture, sample_fraction):
-        super().__init__('embedding', model_architecture, sample_fraction)
-        sequence_embedding_to_x_model.__init__(self)
-        self.num_test_repeats=1
         self.assay_str=','.join([str(x) for x in seq_to_assay_model_prop[0]])
         seq_to_assay_model_name='seq_assay'+self.assay_str+'_'+str(seq_to_assay_model_prop[1])+'_'+str(seq_to_assay_model_prop[2])+'_'+str(seq_to_assay_model_prop[3])
+        super().__init__('embedding_'+seq_to_assay_model_name, model_architecture, sample_fraction)
+        sequence_embedding_to_x_model.__init__(self)
+        self.num_test_repeats=1
         self.training_df=load_format_data.load_df('/predicted/learned_embedding_assay_to_dot_training_data_'+seq_to_assay_model_name)
         self.testing_df=load_format_data.load_df('/predicted/learned_embedding_seq_to_dot_test_data_'+seq_to_assay_model_name)
+
+class final_sequence_embeding_to_yield_model(sequence_embeding_to_yield_model):
+    'look at class name, but done with better train/test split'
+    def __init__(self, seq_to_assay_model_prop, model_architecture, sample_fraction):
+        super().__init__(seq_to_assay_model_prop, model_architecture, sample_fraction)
+        self.update_model_name('final'+self.model_name)
+        self.switch_train_test()
