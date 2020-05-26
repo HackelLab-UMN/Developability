@@ -15,12 +15,15 @@ def get_model(model_architecture):
         'fnn': fnn(),
         'emb_fnn_flat': emb_fnn_flat(),
         'emb_fnn_maxpool': emb_fnn_maxpool(),
+        'emb_fnn_maxpool_linear': emb_fnn_maxpool_linear(),
         'emb_rnn': emb_rnn(),
         'emb_cnn': emb_cnn(),
         'small_emb_rnn': small_emb_rnn(),
         'small_emb_cnn': small_emb_cnn(),
         'small_emb_atn_rnn': small_emb_atn_rnn(),
-        'small_emb_atn_cnn': small_emb_atn_cnn()
+        'small_emb_atn_cnn': small_emb_atn_cnn(),
+        'small_emb_rnn_linear': small_emb_rnn_linear(),
+        'small_emb_cnn_linear': small_emb_cnn_linear()
         }
     return model_switcher.get(model_architecture)
 
@@ -72,6 +75,7 @@ class nn():
         self.space=space
         input_shape=kwargs['xa_len']+kwargs['cat_var_len']
         self.xa_len=kwargs['xa_len']
+        self.lin_or_sig=kwargs['lin_or_sig']
 
         self.inputs=tf.keras.Input(shape=(input_shape,))
 
@@ -90,7 +94,7 @@ class nn():
             dense[i]=tf.keras.layers.Dense(nodes,activation='relu')(drop[i])
         
         ###final output uses last dropout layer
-        self.outputs=tf.keras.layers.Dense(1,activation='linear')(drop[-1])  
+        self.outputs=tf.keras.layers.Dense(1,activation=self.lin_or_sig)(drop[-1])  
 
 
     def set_end_model(self):
@@ -134,6 +138,10 @@ class emb_nn(nn):
     def get_seq_embeding_layer_model(self):
         return tf.keras.Model(inputs=self.model.input,outputs=self.model.get_layer('seq_embedding').output)
 
+    def reduce_to_linear_embedding(self):
+        self.parameter_space['dense_layers']=hp.choice('dense_layers',[1])
+
+
 
 class emb_fnn_maxpool(emb_nn):
     def __init__(self):
@@ -147,6 +155,11 @@ class emb_fnn_maxpool(emb_nn):
         self.recombine_cat_var()
         self.dense_layers()
         self.set_end_model()
+
+class emb_fnn_maxpool_linear(emb_fnn_maxpool):
+    def __init__(self):
+        super().__init__()
+        self.reduce_to_linear_embedding()
 
 class emb_fnn_flat(emb_nn):
     def __init__(self):
@@ -184,6 +197,11 @@ class small_emb_rnn(emb_rnn):
     def __init__(self):
         super().__init__()
         self.parameter_space['units']=hp.quniform('units',1,5,1)
+
+class small_emb_rnn_linear(small_emb_rnn):
+    def __init__(self):
+        super().__init__()
+        self.reduce_to_linear_embedding()
 
 class small_emb_atn_rnn(small_emb_rnn):
     def __init__(self):
@@ -230,6 +248,13 @@ class small_emb_cnn(emb_cnn):
     def __init__(self):
         super().__init__()
         self.parameter_space['filters']=hp.quniform('filters',1,10,1)
+
+
+class small_emb_cnn_linear(small_emb_cnn):
+    def __init__(self):
+        super().__init__()
+        self.reduce_to_linear_embedding()
+
 
 class small_emb_atn_cnn(small_emb_cnn):
     def __init__(self):

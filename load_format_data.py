@@ -108,6 +108,15 @@ def get_assays(assays,df):
     x_a=df.loc[:,column_names].values.tolist()
     return x_a
 
+def get_seq_and_assays(assays,df):
+    'x_a is concat(onehot,assay scores)'
+    assay_list=get_assays(assays,df)
+    sequence_list=get_onehot(df)
+    x_a=[]
+    for i,j in zip(assay_list,sequence_list):
+        x_a.append(i+j)
+    return x_a
+
 def get_control(df):
     'x_a should be null for a zero_rule model that guesses based upon average'
     x_a=[[]]*len(df)
@@ -115,7 +124,8 @@ def get_control(df):
 
 def get_embedding(df):
     'gets learned embedding for x_a'
-    x_a=df.loc[:,'learned_embedding']
+    x_a_in=df.loc[:,'learned_embedding']
+    x_a=[[]]*len(df)
     for i in range(len(x_a)):
-        x_a[i]=x_a[i][0].tolist()
+        x_a[i]=x_a_in.iloc[i][0].tolist()
     return x_a

@@ -38,18 +38,25 @@ class x_to_yield_model(model):
         self.plot_type=plot_model.x_to_yield_plot
         self.training_df=load_format_data.load_df('assay_to_dot_training_data')
         self.testing_df=load_format_data.load_df('seq_to_dot_test_data') 
+        self.lin_or_sig='linear'
         self.num_cv_splits=10
         self.num_cv_repeats=10
-        self.num_test_repeats=3
+        self.num_test_repeats=10
         self.num_hyp_trials=50
 
-    def save_predictions(self):
+    def save_predictions(self,input_df_description=None):
         'saves model predictions for the large dataset'
-        df=load_format_data.load_df('seq_to_assay_train_1,8,9,10') #will have to adjust if missing datapoints
+
+        if not input_df_description:
+            input_df_description='seq_to_assay_train_1,8,10'
+            df=load_format_data.load_df(input_df_description) #will have to adjust if missing datapoints
+        else:
+            df=load_format_data.load_df('predicted/'+input_df_description) #for using predicted embeddings 
+
         OH_matrix=np.eye(2)
         matrix_col=['IQ_Average_bc','SH_Average_bc']
         x_a=self.get_input_seq(df)
-        for z in range(3): #no of models
+        for z in range(1): #no of models
             self.load_model(z)
             for i in range(2):
                 cat_var=[]
@@ -59,13 +66,23 @@ class x_to_yield_model(model):
                 df_prediction=self._model.model.predict(x).squeeze().tolist()
                 col_name=matrix_col[i]
                 df.loc[:,col_name]=df_prediction
-            df.to_pickle('./datasets/predicted/seq_to_assay_train_1,8,9,10_'+self.model_name+'_'+str(z)+'.pkl')
+                col_name_std=matrix_col[i]+'_std'
+                df.loc[:,col_name_std]=[0]*len(df_prediction)
+            df.to_pickle('./datasets/predicted/'+input_df_description+'_'+self.model_name+'_'+str(z)+'.pkl')
 
     def switch_train_test(self):
         regular_training_df=self.training_df
         extra_training_df,self.testing_df=load_format_data.get_random_split(self.testing_df)
         self.training_df=regular_training_df.append(extra_training_df)
 
+    def limit_test_set(self,assays):
+        #Limit test set for data that has all assay scores used in model
+        sort_names=[]
+        for i in assays:
+            sort_names.append('Sort'+str(i)+'_mean_score')
+        dataset=self.testing_df
+        dataset=dataset[~dataset[sort_names].isna().any(axis=1)] 
+        self.testing_df=dataset
 
 class x_to_assay_model(model):
     'sets to assay_model'
@@ -75,11 +92,12 @@ class x_to_assay_model(model):
         self.assays=assays
         self.get_output_and_explode=partial(load_format_data.explode_assays,assays)
         self.plot_type=plot_model.x_to_assay_plot
-        self.training_df=load_format_data.load_df('seq_to_assay_train_1,8,9,10') #could adjust in future for sequences with predictive assays
+        self.training_df=load_format_data.load_df('seq_to_assay_train_1,8,10') #could adjust in future for sequences with predictive assays
         self.testing_df=load_format_data.load_df('assay_to_dot_training_data')
+        self.lin_or_sig='sigmoid'
         self.num_cv_splits=3
         self.num_cv_repeats=3
-        self.num_test_repeats=3
+        self.num_test_repeats=10
         self.num_hyp_trials=50
 
 
@@ -94,16 +112,18 @@ class x_to_assay_model(model):
                 for j in x_a: #for each sequence add cat_var
                     cat_var.append(OH_matrix[i].tolist())
                 x=load_format_data.mix_with_cat_var(x_a,cat_var)
-                self._model.set_model(self.get_best_trial()['hyperparam'],xa_len=len(x[0])-len(cat_var[0]), cat_var_len=len(cat_var[0])) #need to build nn arch
+                self._model.set_model(self.get_best_trial()['hyperparam'],xa_len=len(x[0])-len(cat_var[0]), cat_var_len=len(cat_var[0]),lin_or_sig=self.lin_or_sig) #need to build nn arch
                 self.load_model(z) #load pkled sklearn model or weights of nn model
                 df_prediction=self._model.model.predict(x).squeeze().tolist()
                 df.loc[:,'Sort'+str(self.assays[i])+'_mean_score']=df_prediction
             df.to_pickle('./datasets/predicted/seq_to_dot_test_data_'+self.model_name+'_'+str(z)+'.pkl')
         
 
-    def save_sequence_embeddings(self):
+    def save_sequence_embeddings(self,df_list=None):
         'save sequence embeddings of model'
-        df_list=['assay_to_dot_training_data','seq_to_dot_test_data']
+
+        if not df_list:
+            df_list=['assay_to_dot_training_data','seq_to_dot_test_data']
         OH_matrix=np.eye(len(self.assays))
 
         for df_name in df_list:
@@ -115,7 +135,7 @@ class x_to_assay_model(model):
                     for j in x_a: #for each sequence add cat_var
                         cat_var.append(OH_matrix[i].tolist())
                     x=load_format_data.mix_with_cat_var(x_a,cat_var)
-                    self._model.set_model(self.get_best_trial()['hyperparam'],xa_len=len(x[0])-len(cat_var[0]), cat_var_len=len(cat_var[0])) #need to build nn arch
+                    self._model.set_model(self.get_best_trial()['hyperparam'],xa_len=len(x[0])-len(cat_var[0]), cat_var_len=len(cat_var[0]),lin_or_sig=self.lin_or_sig) #need to build nn arch
                     self.load_model(z) #load pkled sklearn model or weights of nn model
                     seq_embedding_model=self._model.get_seq_embeding_layer_model()
                     df_prediction=seq_embedding_model.predict([x])
@@ -133,13 +153,7 @@ class assay_to_yield_model(x_to_yield_model, assay_to_x_model):
         self.assay_str=','.join([str(x) for x in assays])
         super().__init__('assays'+self.assay_str, model_architecture, sample_fraction)
         assay_to_x_model.__init__(self,assays)
-        #Limit test set for data that has all assay scores used in model
-        sort_names=[]
-        for i in assays:
-            sort_names.append('Sort'+str(i)+'_mean_score')
-        dataset=self.testing_df
-        dataset=dataset[~dataset[sort_names].isna().any(axis=1)] 
-        self.testing_df=dataset
+
 
     def apply_predicted_assay_scores(self,seq_to_assay_model_prop):
         'uses saved predicted assay scores and saved assay-to-yield model to determine performance on test-set' 
@@ -157,6 +171,13 @@ class seq_to_yield_model(x_to_yield_model, seq_to_x_model):
         super().__init__('seq', model_architecture, sample_fraction)
         seq_to_x_model.__init__(self,model_architecture)
 
+class seqandassay_to_yield_model(x_to_yield_model):
+    'combine sequence and assay scores for model input'
+    def __init__(self,assays,model_architecture,sample_fraction):
+        self.assay_str=','.join([str(x) for x in assays])
+        super().__init__('seq_and_assays'+self.assay_str,model_architecture,sample_fraction)
+        self.get_input_seq=partial(load_format_data.get_seq_and_assays,assays)
+
 class final_seq_to_yield_model(seq_to_yield_model):
     'redoes training and testing divison for final comparison'
     def __init__(self,model_architecture,sample_fraction):
@@ -170,9 +191,11 @@ class seq_to_pred_yield_model(x_to_yield_model,seq_to_x_model):
         super().__init__('seq',seq_to_pred_yield_prop[0],seq_to_pred_yield_prop[1])
         seq_to_x_model.__init__(self,seq_to_pred_yield_prop[0])
         self.assay_str=','.join([str(x) for x in pred_yield_model_prop[0]])
-        pred_yield_model_name='assays'+self.assay_str+'_yield_'+pred_yield_model_prop[1]+'_'+str(pred_yield_model_prop[2])+'_'+str(pred_yield_model_prop[3])
+        pred_yield_model_name='seq_and_assays'+self.assay_str+'_yield_'+pred_yield_model_prop[1]+'_'+str(pred_yield_model_prop[2])+'_'+str(pred_yield_model_prop[3]) #change for seq and assay
         self.update_model_name(self.model_name+':'+pred_yield_model_name)
-        self.training_df=load_format_data.load_df('predicted/seq_to_assay_train_1,8,9,10_'+pred_yield_model_name)
+        # self.training_df=load_format_data.load_df('predicted/seq_to_assay_train_1,8,10_'+pred_yield_model_name)
+        self.training_df=load_format_data.load_df('predicted/seq_to_assay_train_1,8,10_seq_and_assay_yield_forest_1_0')
+
         self.num_cv_splits=3
         self.num_cv_repeats=3
         self.num_test_repeats=1

@@ -72,6 +72,7 @@ class model:
             'test_avg_loss': np.inf,
             'test_std_loss': []
             }
+            print(self.model_name)
 
     def build_architecture(self, model_architecture):
         'load architecture class which sets hyp space'
@@ -83,7 +84,7 @@ class model:
         for i in self.data_pairs:
             train_x,train_y,train_cat_var=self.format_modelIO(i[0])
             test_x,test_y,test_cat_var=self.format_modelIO(i[1])
-            self._model.set_model(space,xa_len=len(train_x[0])-len(train_cat_var[0]), cat_var_len=len(train_cat_var[0]))
+            self._model.set_model(space,xa_len=len(train_x[0])-len(train_cat_var[0]), cat_var_len=len(train_cat_var[0]), lin_or_sig=self.lin_or_sig)
             self._model.fit(train_x,train_y)
             if save_model:
                 self.save_model(model_no)

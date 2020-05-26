@@ -32,18 +32,23 @@ class results:
         return model_loss_list,model_loss_std_list,model_name_list,exp_var 
 
 
-    def save_loss_list(self,model_name_list,model_loss_list):
-        df=pd.DataFrame(np.transpose(np.array([model_name_list,model_loss_list])))
-        df.to_csv('./assays_to_yield_cv.csv')
+    def save_loss_list(self,model_name_list,model_loss_list,model_loss_std_list):
+        df=pd.DataFrame(np.transpose(np.array([model_name_list,model_loss_list,model_loss_std_list])))
+        df.to_csv('./aty_best_arch_cv.csv')
     
-    def plot_distribution(self,model_list,set_name):
-        model_loss_list,_,_,exp_var=self.get_loss_list(model_list)
+    def plot_distribution(self,set_name,model_loss_list):
         control_model_loss,_=self.get_control()
+        seq_model=self.get_best_seq_to_yield_simple()
+        seq_model_cv_loss=seq_model.model_stats['cv_avg_loss']
 
-        fig,ax = plt.subplots(1,1,figsize=[3,3],dpi=300)
-        ax.hist(model_loss_list)
-        ax.set_xlabel('Model Loss')
-        ax.set_ylabel('# of Models')
+        fig,ax = plt.subplots(1,1,figsize=[2,2],dpi=300)
+        ax.hist(model_loss_list,bins=20,color='black')
+        ax.set_xlabel('Cross Validation Model Loss',fontsize=6)
+        ax.set_ylabel('# of Models',fontsize=6)
+        ax.tick_params(axis='both', which='major', labelsize=6)
+        ax.axvline(x=control_model_loss,label='Cell Type Control',color='red')
+        ax.axvline(x=seq_model_cv_loss,label='Sequence Model',color='blue')
+        ax.legend(fontsize=6,bbox_to_anchor=(0.5, 1.2), loc='center')
         plt.tight_layout()
         fig.savefig('./'+set_name+'.png')
 
@@ -58,10 +63,12 @@ class results:
         plt.tight_layout()
         fig.savefig('./'+set_name+'.png')
 
-    def get_best_model(self,model_list,save=False):
-        model_loss_list,_,model_name_list,_=self.get_loss_list(model_list)
+    def get_best_model(self,model_list,save=False,plot=False):
+        model_loss_list,model_loss_std_list,model_name_list,exp_var=self.get_loss_list(model_list)
         if save:
-            self.save_loss_list(model_name_list,model_loss_list)
+            self.save_loss_list(model_name_list,model_loss_list,model_loss_std_list)
+        if plot:
+        	self.plot_distribution(plot,model_loss_list)
         best_index=np.argmin(np.array(model_loss_list))
         return model_list[best_index]
 
@@ -77,7 +84,7 @@ class results:
                 combin_list.append(j)
 
         b_models=['ridge','forest','svm','fnn']
-        b_models=b_models[0:3]
+        # b_models=b_models[0:3]
 
         # combin_list=combin_list[0:10]
         best_model_per_combin=[]
@@ -87,11 +94,12 @@ class results:
                 model_list.append(modelbank.assay_to_yield_model(combin,arch,1))
             best_model_per_combin.append(self.get_best_model(model_list))
 
-        best_model=self.get_best_model(best_model_per_combin,save=True)
+        best_model=self.get_best_model(best_model_per_combin,save=True,plot='assay_to_yield_best_arch')
+        print(best_model.model_name)
 
         # self.plot_distribution(best_model_per_combin,'assay_to_yield_best_arch')
 
-    def seq_to_yield_simple(self):
+    def get_best_seq_to_yield_simple(self):
         self.compare_test=False
         self.get_control=self.get_assay_control
 
@@ -100,13 +108,13 @@ class results:
         for arch in b_models:
             model_list.append(modelbank.seq_to_yield_model(arch,1))
 
-        self.plot_bar(model_list,'seq_to_yield_simple')
+        best_model=self.get_best_model(model_list)
+
+        return best_model
 
     def set_model_list(self,mode):
         mode_dict={
         'aty_best_arch':self.assay_to_yield_best_arch,
-        'aty_simple':self.seq_to_yield_simple
-
         }
         self.make_model_list=mode_dict[mode]
         self.make_model_list()
