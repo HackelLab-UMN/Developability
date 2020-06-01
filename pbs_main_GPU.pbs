@@ -5,4 +5,4 @@ module load conda
 source activate awg-gpu
 
 cd ./round3_gp2/Developability/
-python3 main_seq_to_assay $PBS_ARRAYID
+python3 main_seq_to_assay.py $PBS_ARRAYID

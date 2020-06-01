@@ -84,6 +84,16 @@ class x_to_yield_model(model):
         dataset=dataset[~dataset[sort_names].isna().any(axis=1)] 
         self.testing_df=dataset
 
+    def apply_predicted_assay_scores(self,seq_to_assay_model_prop):
+        'uses saved predicted assay scores and saved assay-to-yield model to determine performance on test-set' 
+        seq_to_assay_model_name='seq_assay'+self.assay_str+'_'+str(seq_to_assay_model_prop[0])+'_'+str(seq_to_assay_model_prop[1])+'_'+str(seq_to_assay_model_prop[2])
+        self.num_test_repeats=1
+        self.testing_df=load_format_data.load_df('predicted/seq_to_dot_test_data_'+seq_to_assay_model_name)
+        self.figure_file='./figures/'+self.model_name+'_'+seq_to_assay_model_name+'.png'
+        self.stats_file='./model_stats/'+self.model_name+'_'+seq_to_assay_model_name+'.pkl'
+        self.test_model()
+        # self.plot()
+
 class x_to_assay_model(model):
     'sets to assay_model'
     def __init__(self, model_in, assays, model_architecture, sample_fraction):
@@ -155,15 +165,7 @@ class assay_to_yield_model(x_to_yield_model, assay_to_x_model):
         assay_to_x_model.__init__(self,assays)
 
 
-    def apply_predicted_assay_scores(self,seq_to_assay_model_prop):
-        'uses saved predicted assay scores and saved assay-to-yield model to determine performance on test-set' 
-        seq_to_assay_model_name='seq_assay'+self.assay_str+'_'+str(seq_to_assay_model_prop[0])+'_'+str(seq_to_assay_model_prop[1])+'_'+str(seq_to_assay_model_prop[2])
-        self.num_test_repeats=1
-        self.testing_df=load_format_data.load_df('predicted/seq_to_dot_test_data_'+seq_to_assay_model_name)
-        self.figure_file='./figures/'+self.model_name+'_'+seq_to_assay_model_name+'.png'
-        self.stats_file='./model_stats/'+self.model_name+'_'+seq_to_assay_model_name+'.pkl'
-        self.test_model()
-        self.plot()
+
 
 class seq_to_yield_model(x_to_yield_model, seq_to_x_model):
     'seq to yield'

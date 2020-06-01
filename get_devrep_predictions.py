@@ -1,3 +1,6 @@
+import time
+start_time=time.time()
+
 import submodels_module as mb
 import load_format_data
 import pandas as pd 
@@ -47,9 +50,9 @@ predicted_yield_avg=np.average(predicted_yield_per_model,axis=0)
 #load original df, save final df with a Developability column (which we want to maximize)
 df_original=load_format_data.load_df(df[0])
 df_original['Developability']=predicted_yield_avg.tolist()
-df_original.to_pickle('/datasets/'+df[0]+'_with_predictions.pkl')
+df_original.to_pickle('./datasets/'+df[0]+'_with_predictions.pkl')
 
 
-
+print("--- %s seconds ---" % (time.time() - start_time))
 
 
