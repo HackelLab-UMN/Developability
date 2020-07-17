@@ -41,7 +41,6 @@ def close_violin(self, j, steps_2_show, loops_2_show, Nb_steps, Nb_loops, y_lim=
         if i == 0:
             str_steps_2_show.append('Init')
         else:
-            #TODO: pls just check that average once
             str_steps_2_show.append('step:%i,percent:%0.2f' % (i,sum(self.percent_pos[j])/Nb_steps))
     fig = v[0]
     ax = v[1]
