@@ -25,7 +25,7 @@ def plot_violin(self, i, j, seq, steps_2_show, loops_2_show):
     idx_step = np.argmax(steps_2_show == i)
     dev = seq['Developability'].to_numpy()  # yield
     violin_parts = self.vp[idx_loop][1].violinplot([dev], positions=[idx_step], showmedians=False,
-                                                   showextrema=True, points=100,
+                                                   showextrema=False, points=100,
                                                    widths=.9)
     for pc in violin_parts['bodies']:
         pc.set_color('k')

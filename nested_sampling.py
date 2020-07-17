@@ -101,9 +101,9 @@ class nested_sampling(ABC):
                                       percent_pos=self.percent_pos)
 
         # TODO: write 2 pickle file the best sequences ...
-        self.original_seq.to_pickle(path=pm.make_file_name(self,file_description='optimized_sequence',fileformat='pkl'))
+        self.original_seq.to_pickle(path=pm.make_file_name(dir_name=self.dir_name,file_description='optimized_sequence',fileformat='pkl'))
 
-        self.times.to_pickle(path=pm.make_file_name(self,file_description='times',fileformat='pkl'))
+        self.times.to_pickle(path=pm.make_file_name(dir_name=self.dir_name,file_description='times',fileformat='pkl'))
         return self.times
     @abstractmethod
     def walk(self, min_yield, steps_2_show, N_loops, loops_2_show, N_steps=10, j=1):
@@ -269,8 +269,8 @@ def driver(suppress_output=False):
     # min_yield_start , _= trial1.update_min_yield(first_seqeunce)
     # trial1.plot_hist(0, 1,first_seqeunce)
     # trial1.walk(min_yield=min_yield_start)
-    N_loops=1000
-    N_steps=10
+    N_loops=3
+    N_steps=5
     if suppress_output is True:
         with suppress_stdout():
             trial1.nested_sample(N_loops=N_loops,N_steps=N_steps)

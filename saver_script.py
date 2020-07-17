@@ -19,6 +19,11 @@ from contextlib import contextmanager
 
 
 
-df=pd.read_pickle('./sampling_data/Nb_sequences_1000_Nbsteps_10_Nb_loops_1000/optimized_sequence.pkl')
+df=pd.read_pickle(pm.make_file_name(dir_name='Nb_sequences_1000_Nbsteps_10_Nb_loops_1000',file_description='times',fileformat='pkl'))
 
-pm.plot_hist(dir_name='Nb_sequences_1000_Nbsteps_10_Nb_loops_1000',j=1000,i=10,seq=df)
+times=sm.convert2numpy(df=df,field='0th loop')
+
+print(np.sum(times,axis=0))
+print(df)
+#pm.plot_hist(dir_name='Nb_sequences_1000_Nbsteps_10_Nb_loops_1000',j=1000,i=10,seq=df)
+
