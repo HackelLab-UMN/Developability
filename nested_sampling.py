@@ -269,8 +269,8 @@ def driver(suppress_output=False):
     # min_yield_start , _= trial1.update_min_yield(first_seqeunce)
     # trial1.plot_hist(0, 1,first_seqeunce)
     # trial1.walk(min_yield=min_yield_start)
-    N_loops=3
-    N_steps=5
+    N_loops=10000
+    N_steps=3
     if suppress_output is True:
         with suppress_stdout():
             trial1.nested_sample(N_loops=N_loops,N_steps=N_steps)
